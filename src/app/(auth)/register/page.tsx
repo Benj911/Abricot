@@ -1,0 +1,195 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Cookies from "js-cookie";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+
+export default function RegisterPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Gestion de la soumission du formulaire de création de compte
+  const handleRegister: React.SubmitEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    // Vérification de concordance des mots de passe côté client avant l'appel API
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }), 
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Erreur lors de l'inscription.");
+      }
+
+      // Extraction du token d'authentification fourni par l'API
+      const token = data.data?.token || data.token;
+      
+      if (token) {
+        Cookies.set("abricot_token", token, { expires: 7, secure: true, sameSite: "strict" }); 
+        router.push("/dashboard");
+      } else {
+        throw new Error("Token manquant dans la réponse.");
+      }
+
+    } catch (err: any) {
+      setError(err.message || "Une erreur inattendue est survenue.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex bg-white">
+      
+      {/* Section formulaire */}
+      <div className="w-full lg:w-[40%] flex flex-col justify-between p-8 md:p-12 relative z-10">
+        
+        <div className="flex justify-center pt-6">
+          <Link href="/" aria-label="Retour à la page d'accueil" className="inline-block hover:opacity-90 transition-opacity">
+            <svg aria-hidden="true" width="252" height="33" viewBox="0 0 253 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M161.309 0.580078C165.624 0.580078 169.291 1.0997 172.307 2.13965C175.323 3.17961 177.701 4.6751 179.443 6.625C181.211 8.57492 182.317 10.9408 182.759 13.7227L166.184 16.4141C166.184 15.8161 166.054 15.3086 165.794 14.8926C165.534 14.4508 165.183 14.0998 164.741 13.8398C164.299 13.5798 163.779 13.3849 163.181 13.2549C162.609 13.1249 161.985 13.0596 161.309 13.0596C160.373 13.0596 159.54 13.1902 158.812 13.4502C158.085 13.6842 157.5 14.0481 157.058 14.542C156.642 15.01 156.434 15.608 156.434 16.3359C156.434 16.7779 156.512 17.1809 156.668 17.5449C156.824 17.9089 157.045 18.2336 157.331 18.5195C157.617 18.7795 157.955 19.0006 158.345 19.1826C158.761 19.3386 159.216 19.4692 159.71 19.5732C160.204 19.6512 160.737 19.6904 161.309 19.6904C162.686 19.6904 163.843 19.4169 164.779 18.8711C165.715 18.2991 166.184 17.48 166.184 16.4141L182.759 18.0908C182.473 20.0148 181.836 21.8218 180.848 23.5117C179.886 25.2017 178.534 26.6971 176.792 27.9971C175.076 29.2971 172.93 30.3111 170.356 31.0391C167.809 31.793 164.792 32.1699 161.309 32.1699C159.255 32.1699 157.357 32.0402 155.615 31.7803C153.873 31.5203 152.26 31.1434 150.778 30.6494C149.323 30.1555 148.01 29.5574 146.84 28.8555C145.696 28.1535 144.682 27.3596 143.798 26.4756C142.914 25.5916 142.173 24.6298 141.575 23.5898C141.003 22.5239 140.574 21.3932 140.288 20.1973C140.002 19.0013 139.858 17.74 139.858 16.4141C139.858 14.2561 140.21 12.3185 140.912 10.6025C141.614 8.88677 142.602 7.4051 143.876 6.15723C145.176 4.90928 146.71 3.86909 148.478 3.03711C150.271 2.20517 152.247 1.59411 154.405 1.2041C156.563 0.788111 158.865 0.580087 161.309 0.580078ZM190.897 0C191.085 0.0469412 194.982 0.328539 196.766 2.1123C197.564 2.91028 197.845 3.89626 197.938 4.78809C198.549 4.03707 199.347 3.2393 200.474 2.48828C200.708 2.34746 200.99 2.3942 201.131 2.62891C201.272 2.86356 201.225 3.14533 200.99 3.28613C199.066 4.55353 198.173 5.9145 197.798 6.99414V7.04102C197.751 7.04102 197.751 7.04123 197.751 7.08789C197.516 7.69792 197.47 8.21437 197.47 8.54297C197.516 8.54318 197.517 8.58984 197.563 8.58984C197.939 8.54291 198.362 8.49609 198.737 8.49609C201.507 8.49625 204.182 9.85822 206.06 12.1582C206.341 12.2521 206.67 12.4393 206.951 12.6738C206.951 11.9698 207.092 11.0313 207.562 10.1865C208.172 9.10688 209.299 8.30815 210.801 7.93262C211.035 7.88577 211.27 8.02701 211.364 8.30859C211.458 8.54328 211.27 8.82514 211.035 8.87207C209.768 9.20066 208.876 9.81042 208.359 10.7021C208.031 11.2654 207.891 11.923 207.891 12.4863C208.125 12.2986 208.407 12.1574 208.735 12.0166C210.519 11.3126 212.303 12.4393 212.819 13.2842C212.866 13.3311 213.007 13.5193 213.147 13.707C214.18 14.9744 216.622 18.0252 216.903 22.4375C217.232 27.7419 213.148 29.5264 213.007 29.5264C212.983 29.5498 212.972 29.5616 212.96 29.5674L212.679 29.6025C212.55 29.6201 212.373 29.6435 212.162 29.667C211.27 30.418 210.19 30.8875 209.017 31.0283C208.782 31.0752 208.547 31.0752 208.312 31.0752C206.717 31.0751 205.121 30.4651 203.713 29.4326C202.211 30.4184 200.473 30.9814 198.689 30.9814C198.314 30.9814 197.892 30.9346 197.517 30.8877C197.47 30.9346 197.375 30.9814 197.281 30.9814C190.287 30.9813 185.922 26.7096 185.922 19.7627C185.922 13.8012 190.616 8.91858 196.437 8.54297C196.437 8.26144 196.483 7.93294 196.577 7.51074C196.296 7.51078 195.967 7.55762 195.639 7.55762C194.653 7.55761 193.385 7.3226 192.446 6.38379C190.664 4.6009 190.381 0.661717 190.381 0.516602C190.381 0.375778 190.429 0.234507 190.522 0.140625C190.616 0.0469651 190.757 4.01913e-05 190.897 0ZM32.4092 1.75C32.8772 3.36194 33.3315 4.98706 33.7734 6.625C34.2414 8.23698 34.6967 9.86202 35.1387 11.5C35.6067 13.112 36.075 14.737 36.543 16.375C37.011 17.987 37.4662 19.612 37.9082 21.25C38.3762 22.8619 38.8305 24.4871 39.2725 26.125C39.7405 27.737 40.2088 29.362 40.6768 31H23.2832L22.6201 27.1777H17.3154L16.6533 31H0C0.467997 29.362 0.923237 27.737 1.36523 26.125C1.83322 24.4871 2.28751 22.8619 2.72949 21.25C3.19749 19.612 3.65273 17.987 4.09473 16.375C4.56273 14.737 5.01796 13.112 5.45996 11.5C5.92796 9.86201 6.3832 8.23699 6.8252 6.625C7.29318 4.98707 7.74747 3.36194 8.18945 1.75H32.4092ZM72.2227 1.75C73.9645 1.75 75.4078 2.0878 76.5518 2.76367C77.6957 3.41364 78.554 4.25889 79.126 5.29883C79.724 6.33883 80.0234 7.4312 80.0234 8.5752C80.0234 9.71905 79.7239 10.8368 79.126 11.9287C78.528 12.9946 77.6183 13.866 76.3965 14.542C75.2005 15.218 73.692 15.5557 71.8721 15.5557C71.8721 15.5557 71.859 15.5557 71.833 15.5557C71.833 15.5557 71.833 15.5689 71.833 15.5947H71.8721C73.9778 15.5947 75.7197 15.9718 77.0977 16.7256C78.4757 17.4796 79.5027 18.4423 80.1787 19.6123C80.8547 20.7823 81.1934 22.0174 81.1934 23.3174C81.1933 24.2792 80.9983 25.2152 80.6084 26.125C80.2444 27.035 79.6847 27.8671 78.9307 28.6211C78.1767 29.349 77.2409 29.934 76.123 30.376C75.005 30.792 73.7047 31 72.2227 31H41.5303V1.75H72.2227ZM110.517 1.75C112.805 1.75 114.703 2.16607 116.211 2.99805C117.719 3.80405 118.85 4.85723 119.604 6.15723C120.358 7.43109 120.735 8.78307 120.735 10.2129C120.735 11.6948 120.319 13.138 119.487 14.542C118.681 15.9199 117.446 17.0506 115.782 17.9346C114.144 18.8186 112.09 19.2607 109.62 19.2607H106.734V19.417H115.587L121.593 31H103.068C102.574 29.6741 102.067 28.3483 101.547 27.0225C101.053 25.6965 100.546 24.3699 100.026 23.0439C99.5324 21.718 99.0248 20.3923 98.5049 19.0664H103.029C103.549 19.0664 104.005 18.988 104.395 18.832C104.81 18.676 105.148 18.4679 105.408 18.208C105.668 17.948 105.863 17.6616 105.993 17.3496C106.123 17.0117 106.188 16.6738 106.188 16.3359C106.188 15.868 106.071 15.4257 105.837 15.0098C105.603 14.5939 105.252 14.256 104.784 13.9961C104.316 13.7361 103.731 13.6065 103.029 13.6064H98.583C98.5811 13.6083 98.5678 13.6207 98.5439 13.6445H98.5049V31H82.3203V1.75H110.517ZM138.686 31H122.501V1.75H138.686V31ZM252.568 13.6064H243.169C243.167 13.6081 243.154 13.6205 243.13 13.6445C243.13 13.6445 243.117 13.6445 243.091 13.6445V31H226.906V13.6836C226.906 13.658 226.893 13.6446 226.867 13.6445C226.867 13.6189 226.854 13.6065 226.828 13.6064H217.429V1.75H252.568V13.6064ZM198.689 9.43555C193.761 9.43582 189.724 14.083 189.724 19.7627C189.724 25.3953 193.761 30.0417 198.689 30.042C200.192 30.042 201.695 29.6203 202.962 28.8223C201.084 27.1324 199.582 24.5969 199.019 21.6396C198.174 17.2742 199.77 13.2842 202.915 11.876H202.962C203.057 11.8755 203.573 11.6885 204.37 11.7354C202.774 10.2802 200.755 9.43555 198.689 9.43555ZM207.421 14.5049C205.778 12.2986 203.712 12.6737 203.337 12.7676C202.023 13.7064 202.305 17.556 203.103 20.7949C203.854 23.7521 205.262 26.0052 207.608 27.8828C209.204 29.1502 212.303 28.7276 212.772 28.6807C213.196 28.4453 216.199 26.8957 215.917 22.4844C215.682 18.3539 213.382 15.491 212.396 14.2705C212.209 14.0359 212.068 13.8946 211.975 13.7539C211.646 13.2376 210.284 12.346 209.017 12.8623C208.125 13.2377 208.125 13.7535 208.172 13.9883C208.407 14.2699 209.111 15.1149 209.205 16.1006C210.378 16.4293 211.834 17.556 211.928 19.7148C212.069 20.419 212.162 21.2646 212.162 22.0156C212.162 23.189 211.88 24.2214 210.801 24.3623H210.566C209.064 24.3623 206.858 22.4844 206.576 20.3721C206.389 18.8702 206.764 17.2276 207.515 16.4766C207.749 16.2419 207.984 16.1007 208.312 16.0537C208.172 15.3027 207.468 14.5518 207.468 14.5518V14.5049H207.421ZM211.552 25.3955C211.693 25.1609 211.974 25.0663 212.209 25.207L213.711 26.0527C213.946 26.1936 214.039 26.4753 213.945 26.71C213.851 26.8505 213.711 26.9443 213.523 26.9443C213.43 26.9443 213.383 26.9442 213.289 26.8975L211.739 26.0527C211.505 25.9119 211.411 25.6302 211.552 25.3955ZM212.726 24.5498C212.82 24.3623 213.101 24.2685 213.336 24.3623L214.368 24.8789C214.603 25.0197 214.696 25.3016 214.556 25.4424C214.462 25.6298 214.321 25.7236 214.134 25.7236C214.087 25.7236 213.992 25.7237 213.945 25.6768L212.913 25.1602C212.725 25.0662 212.632 24.7845 212.726 24.5498ZM19.7725 12.3584C19.6685 12.9823 19.5257 13.7886 19.3438 14.7764C19.1878 15.7641 19.0189 16.8169 18.8369 17.9346C18.6549 19.0264 18.4861 20.0668 18.3301 21.0547C18.1741 22.0166 18.0434 22.8227 17.9395 23.4727C17.8355 24.0967 17.7842 24.4092 17.7842 24.4092V24.4482H22.1523V24.4092C22.1523 24.4092 22.1001 24.0967 21.9961 23.4727C21.8921 22.8227 21.7484 22.0165 21.5664 21.0547C21.4104 20.0668 21.2415 19.0264 21.0596 17.9346C20.8776 16.8169 20.7087 15.7641 20.5527 14.7764C20.3968 13.7886 20.254 12.9823 20.124 12.3584C20.02 11.7344 19.9678 11.4219 19.9678 11.4219H19.9287C19.9287 11.4219 19.8765 11.7344 19.7725 12.3584ZM56.8965 17.1162V20.5869H62.4727C63.1747 20.5869 63.6952 20.405 64.0332 20.041C64.3971 19.677 64.5791 19.2609 64.5791 18.793C64.5791 18.559 64.5399 18.3509 64.4619 18.1689C64.3839 17.9611 64.2672 17.779 64.1113 17.623C63.9814 17.4412 63.7992 17.3114 63.5654 17.2334C63.3575 17.1294 63.1101 17.0772 62.8242 17.0771H56.9346C56.9325 17.0792 56.9202 17.0925 56.8965 17.1162ZM56.9346 11.6172C56.9089 11.6173 56.8965 11.6304 56.8965 11.6562V15.127H62.2783C62.7462 15.1269 63.1363 15.0485 63.4482 14.8926C63.76 14.7107 63.9945 14.4903 64.1504 14.2305C64.3064 13.9445 64.3838 13.645 64.3838 13.333C64.3838 12.891 64.228 12.5011 63.916 12.1631C63.63 11.7991 63.2009 11.6172 62.6289 11.6172H56.9346Z" fill="#121212"/>
+            </svg>
+          </Link>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center max-w-md w-full mx-auto py-12">
+          <h1 className="text-3xl font-bold text-[#D3590B] mb-10 text-center lg:text-left">
+            Inscription
+          </h1>
+
+          <form onSubmit={handleRegister} className="space-y-6">
+            
+            {/* Zone d'affichage des erreurs avec aria-live pour l'accessibilité */}
+            {error && (
+              <div role="alert" aria-live="assertive" className="p-3 bg-red-50 text-red-500 text-xs rounded-lg font-medium">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-xs font-semibold text-gray-800">
+                Email
+              </label>
+              <input 
+                id="email"
+                type="email" 
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-white text-sm border border-gray-200 px-4 py-3 rounded-lg outline-none focus:border-[#D3590B] transition-colors shadow-sm" 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-xs font-semibold text-gray-800">
+                Mot de passe
+              </label>
+              <div className="relative">
+                <input 
+                  id="password"
+                  type={showPassword ? "text" : "password"} 
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white text-sm border border-gray-200 px-4 py-3 pr-10 rounded-lg outline-none focus:border-[#D3590B] transition-colors shadow-sm" 
+                />
+                <button 
+                  type="button"
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  onMouseDown={() => setShowPassword(true)}
+                  onMouseUp={() => setShowPassword(false)}
+                  onMouseLeave={() => setShowPassword(false)}
+                  onTouchStart={() => setShowPassword(true)}
+                  onTouchEnd={() => setShowPassword(false)}
+                  className="absolute right-3 top-3.5 text-gray-400 hover:text-[#D3590B] transition-colors"
+                >
+                  {showPassword ? <Eye aria-hidden="true" className="w-4 h-4" /> : <EyeOff aria-hidden="true" className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="block text-xs font-semibold text-gray-800">
+                Confirmer le mot de passe
+              </label>
+              <div className="relative">
+                <input 
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"} 
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-white text-sm border border-gray-200 px-4 py-3 pr-10 rounded-lg outline-none focus:border-[#D3590B] transition-colors shadow-sm" 
+                />
+                <button 
+                  type="button"
+                  aria-label={showConfirmPassword ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
+                  onMouseDown={() => setShowConfirmPassword(true)}
+                  onMouseUp={() => setShowConfirmPassword(false)}
+                  onMouseLeave={() => setShowConfirmPassword(false)}
+                  onTouchStart={() => setShowConfirmPassword(true)}
+                  onTouchEnd={() => setShowConfirmPassword(false)}
+                  className="absolute right-3 top-3.5 text-gray-400 hover:text-[#D3590B] transition-colors"
+                >
+                  {showConfirmPassword ? <Eye aria-hidden="true" className="w-4 h-4" /> : <EyeOff aria-hidden="true" className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                aria-label={isLoading ? "Création du compte en cours" : "S'inscrire"}
+                className="w-full bg-[#1A1A1A] hover:bg-black text-white text-sm font-semibold py-3.5 rounded-xl transition-colors shadow-sm flex justify-center items-center disabled:opacity-50"
+              >
+                {isLoading ? <Loader2 aria-hidden="true" className="w-4 h-4 animate-spin" /> : "S'inscrire"}
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        <div className="text-xs font-medium text-gray-600 text-center mt-auto">
+          Déjà inscrit ? <Link href="/login" className="text-[#D3590B] hover:underline ml-1">Se connecter</Link>
+        </div>
+
+      </div>
+
+      <div className="hidden lg:block lg:w-[60%] relative bg-gray-100">
+        <img 
+          src="https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=1200" 
+          alt="Plan de travail avec outils de bureau" 
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+
+    </div>
+  );
+}

@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  /* Typographie : Variables attachées aux instances next/font (ex: Inter et Manrope) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Réinitialisation et configuration globale du document */
+body {
+  font-family: var(--font-sans);
+}
+
+html {
+  /* Prévient les sauts de mise en page lors de l'apparition de la barre de défilement */
+  scrollbar-gutter: stable;
+}
+
+/* UX par défaut : S'assurer que les éléments interactifs ont le bon indicateur de survol */
+button, a {
+  cursor: pointer;
+}
+
+/* Indication visuelle globale de l'état inactif */
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   ACCESSIBILITÉ (WCAG 2.1 AA)
+   ========================================================================== */
+
+/* * Focus visible (Navigation au clavier) 
+ * Crée un contour clair et contrasté autour des éléments
+ * actifs uniquement lors de la navigation au clavier (Touche Tab).
+ */
+:focus-visible {
+  outline: 2px solid #D3590B;
+  outline-offset: 2px;
+}
+
+/* * Réduction du mouvement (Troubles vestibulaires)
+ * Désactive de manière forcée toutes les animations et transitions fluides 
+ * si l'utilisateur a activé l'option "Réduire les animations" dans son OS.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
