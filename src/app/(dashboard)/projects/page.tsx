@@ -212,125 +212,146 @@ export default function ProjectsListPage() {
         <button 
           onClick={() => setShowProjectModale(true)} 
           aria-haspopup="dialog"
-          className="bg-[#121212] hover:bg-black text-white w-[181px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors shadow-sm flex items-center justify-center gap-1.5"
+          className="bg-[#121212] hover:bg-black text-white w-[181px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
         >
           + Créer un projet
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map((project) => {
-          // Détermination du rôle de l'utilisateur courant sur ce projet
-          const ownerEmail = typeof project.owner === "object" ? project.owner?.email : project.owner;
-          const isOwner = ownerEmail?.toLowerCase() === userEmail?.toLowerCase();
-          const roleLabel = isOwner ? "Propriétaire" : "Contributeur";
+      {/* AFFICHAGE CONDITIONNEL : ETAT VIDE OU LISTE DES PROJETS */}
+      {projects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center min-h-[400px] border border-dashed border-gray-200 rounded-[10px] bg-white p-8 text-center mt-6">
+          <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-[#D3590B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+          </div>
+          <h3 className="font-heading font-semibold text-[18px] text-gray-900 mb-2">Aucun projet trouvé</h3>
+          <p className="font-sans font-normal text-[14px] text-gray-500 max-w-xs mb-6">
+            Vous n'avez pas encore créé de projet. Commencez dès maintenant pour organiser votre travail !
+          </p>
+          <button 
+            onClick={() => setShowProjectModale(true)} 
+            className="bg-[#121212] hover:bg-black text-white px-6 py-3 rounded-[10px] font-sans font-normal text-[14px] transition-colors cursor-pointer"
+          >
+            + Créer mon premier projet
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => {
+            // Détermination du rôle de l'utilisateur courant sur ce projet
+            const ownerEmail = typeof project.owner === "object" ? project.owner?.email : project.owner;
+            const isOwner = ownerEmail?.toLowerCase() === userEmail?.toLowerCase();
+            const roleLabel = isOwner ? "Propriétaire" : "Contributeur";
 
-          // Aplatissement et déduplication des contributeurs pour l'affichage de l'équipe
-          let rawContributors: any[] = [];
-          if (Array.isArray(project.contributors)) {
-            rawContributors = project.contributors;
-          } else if (Array.isArray(project.members)) {
-            rawContributors = project.members.filter(m => m.role !== "OWNER").map(m => m.user || m);
-          }
-          
-          const uniqueContributors = rawContributors.reduce((acc, current) => {
-            const email = current.email || (typeof current === "string" ? current : "");
-            if (email && !acc.find((item: any) => (item.email || item) === email)) {
-              acc.push(current);
+            // Aplatissement et déduplication des contributeurs pour l'affichage de l'équipe
+            let rawContributors: any[] = [];
+            if (Array.isArray(project.contributors)) {
+              rawContributors = project.contributors;
+            } else if (Array.isArray(project.members)) {
+              rawContributors = project.members.filter(m => m.role !== "OWNER").map(m => m.user || m);
             }
-            return acc;
-          }, []);
+            
+            const uniqueContributors = rawContributors.reduce((acc, current) => {
+              const email = current.email || (typeof current === "string" ? current : "");
+              if (email && !acc.find((item: any) => (item.email || item) === email)) {
+                acc.push(current);
+              }
+              return acc;
+            }, []);
 
-          // Statistiques du projet
-          const teamSize = 1 + uniqueContributors.length; // +1 inclut le owner
-          const totalTasks = project.tasks?.length || 0;
-          const completedTasks = project.tasks?.filter(t => 
-            t.status?.toLowerCase() === "done" || 
-            t.status?.toLowerCase() === "terminée" || 
-            t.status?.toLowerCase() === "completed"
-          ).length || 0;
-          const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            // Statistiques du projet
+            const teamSize = 1 + uniqueContributors.length; // +1 inclut le owner
+            const totalTasks = project.tasks?.length || 0;
+            const completedTasks = project.tasks?.filter(t => 
+              t.status?.toLowerCase() === "done" || 
+              t.status?.toLowerCase() === "terminée" || 
+              t.status?.toLowerCase() === "completed"
+            ).length || 0;
+            const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-          return (
-            <Link 
-              href={`/projects/${project.id}`} 
-              key={project.id} 
-              aria-label={`Ouvrir le projet ${project.name}`}
-              className="bg-white border border-gray-100 rounded-[10px] p-6 shadow-sm flex flex-col justify-between min-h-[260px] transition-all hover:border-gray-200 group cursor-pointer text-left"
-            >
-              <div className="space-y-2">
-                <h3 className="font-heading font-semibold text-[18px] text-gray-900 group-hover:text-black transition-colors line-clamp-1" title={project.name}>
-                  {project.name}
-                </h3>
-                <p className="font-sans font-normal text-[14px] text-[#6B7280] leading-[21px] h-[42px] line-clamp-2">
-                  {project.description || "Aucune description renseignée."}
-                </p>
-              </div>
+            return (
+              <Link 
+                href={`/projects/${project.id}`} 
+                key={project.id} 
+                aria-label={`Ouvrir le projet ${project.name}`}
+                className="bg-white border border-gray-100 rounded-[10px] p-6 shadow-sm flex flex-col justify-between min-h-[260px] transition-all hover:border-gray-200 group cursor-pointer text-left"
+              >
+                <div className="space-y-2">
+                  <h3 className="font-heading font-semibold text-[18px] text-gray-900 group-hover:text-black transition-colors line-clamp-1" title={project.name}>
+                    {project.name}
+                  </h3>
+                  <p className="font-sans font-normal text-[14px] text-[#6B7280] leading-[21px] h-[42px] line-clamp-2">
+                    {project.description || "Aucune description renseignée."}
+                  </p>
+                </div>
 
-              {/* SECTION PROGRESSION avec rôles d'accessibilité (progressbar) */}
-              <div className="space-y-1.5 mt-6 mb-4">
-                <div className="flex items-center justify-between font-sans font-normal text-[12px] text-[#6B7280] mb-1">
-                  <span>Progression</span>
-                  <span className="font-semibold text-gray-800">{progressPercent}%</span>
+                {/* SECTION PROGRESSION avec rôles d'accessibilité (progressbar) */}
+                <div className="space-y-1.5 mt-6 mb-4">
+                  <div className="flex items-center justify-between font-sans font-normal text-[12px] text-[#6B7280] mb-1">
+                    <span>Progression</span>
+                    <span className="font-semibold text-gray-800">{progressPercent}%</span>
+                  </div>
+                  <div 
+                    className="w-full bg-gray-100 h-2 rounded-full overflow-hidden"
+                    role="progressbar"
+                    aria-valuenow={progressPercent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div className="bg-[#D3590B] h-full rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                  <div className="font-sans font-normal text-[10px] text-[#6B7280] pt-1">
+                    {completedTasks}/{totalTasks} tâches terminées
+                  </div>
                 </div>
-                <div 
-                  className="w-full bg-gray-100 h-2 rounded-full overflow-hidden"
-                  role="progressbar"
-                  aria-valuenow={progressPercent}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div className="bg-[#D3590B] h-full rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
-                </div>
-                <div className="font-sans font-normal text-[10px] text-[#6B7280] pt-1">
-                  {completedTasks}/{totalTasks} tâches terminées
-                </div>
-              </div>
 
-              <div className="space-y-3 mt-auto pt-4 border-t border-gray-50">
-                <div className="font-sans font-normal text-[10px] text-[#6B7280] flex items-center gap-1.5">
-                  <span className="text-gray-400">
-                    <svg width="12" height="11" viewBox="0 0 12 11" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M7.52637 6.94727C9.78424 6.94727 11.579 8.74215 11.5791 11H3.47363C3.47372 8.74222 5.2686 6.94738 7.52637 6.94727ZM3.87891 5.21094C4.11047 5.73187 4.45811 6.19468 4.86328 6.54199C3.99485 7.06305 3.2998 7.81614 2.89453 8.68457H0C0 6.77405 1.56313 5.21099 3.47363 5.21094H3.87891ZM7.52637 0.579102C9.12507 0.579102 10.4208 1.87494 10.4209 3.47363C10.4209 5.07238 9.12511 6.36816 7.52637 6.36816C5.92769 6.36809 4.63184 5.07233 4.63184 3.47363C4.63189 1.87499 5.92772 0.579177 7.52637 0.579102ZM3.47363 0C3.99467 0 4.45802 0.173434 4.86328 0.462891C3.99488 1.15761 3.47367 2.25787 3.47363 3.47363C3.47363 3.8789 3.53167 4.28446 3.64746 4.63184H3.47363C2.19994 4.63182 1.1582 3.58913 1.1582 2.31543C1.15843 1.04192 2.20008 1.19457e-05 3.47363 0Z" fill="currentColor"/>
-                    </svg>
-                  </span> 
-                  Équipe ({teamSize})
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div aria-hidden="true" className={`h-7 w-7 rounded-full font-sans font-normal text-[10px] text-black flex items-center justify-center uppercase shrink-0 ${isOwner ? 'bg-[#FFE8D9]' : 'bg-[#E5E7EB]'}`}>
-                    {getInitials(project.owner || ownerEmail)}
+                <div className="space-y-3 mt-auto pt-4 border-t border-gray-50">
+                  <div className="font-sans font-normal text-[10px] text-[#6B7280] flex items-center gap-1.5">
+                    <span className="text-gray-400">
+                      <svg width="12" height="11" viewBox="0 0 12 11" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M7.52637 6.94727C9.78424 6.94727 11.579 8.74215 11.5791 11H3.47363C3.47372 8.74222 5.2686 6.94738 7.52637 6.94727ZM3.87891 5.21094C4.11047 5.73187 4.45811 6.19468 4.86328 6.54199C3.99485 7.06305 3.2998 7.81614 2.89453 8.68457H0C0 6.77405 1.56313 5.21099 3.47363 5.21094H3.87891ZM7.52637 0.579102C9.12507 0.579102 10.4208 1.87494 10.4209 3.47363C10.4209 5.07238 9.12511 6.36816 7.52637 6.36816C5.92769 6.36809 4.63184 5.07233 4.63184 3.47363C4.63189 1.87499 5.92772 0.579177 7.52637 0.579102ZM3.47363 0C3.99467 0 4.45802 0.173434 4.86328 0.462891C3.99488 1.15761 3.47367 2.25787 3.47363 3.47363C3.47363 3.8789 3.53167 4.28446 3.64746 4.63184H3.47363C2.19994 4.63182 1.1582 3.58913 1.1582 2.31543C1.15843 1.04192 2.20008 1.19457e-05 3.47363 0Z" fill="currentColor"/>
+                      </svg>
+                    </span> 
+                    Équipe ({teamSize})
                   </div>
                   
-                  <span className={`w-[109px] h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] shrink-0 ${isOwner ? 'bg-[#FFE8D9] text-[#D3590B]' : 'bg-[#E5E7EB] text-[#6B7280]'}`}>
-                    {roleLabel}
-                  </span>
-                  
-                  <div className="flex items-center -space-x-2 ml-1">
-                    {uniqueContributors.slice(0, 3).map((contrib: any, idx: number) => {
-                      const isMe = contrib.email?.toLowerCase() === userEmail?.toLowerCase();
-                      return (
-                        <div 
-                          key={idx} 
-                          className={`h-7 w-7 rounded-full border-2 border-white flex items-center justify-center font-sans font-normal text-[10px] text-black uppercase relative z-10 ${isMe ? 'bg-[#FFE8D9]' : 'bg-[#E5E7EB]'}`} 
-                          title={typeof contrib === "string" ? contrib : contrib.email}
-                        >
-                          {getInitials(contrib)}
+                  <div className="flex items-center gap-2">
+                    <div aria-hidden="true" className={`h-7 w-7 rounded-full font-sans font-normal text-[10px] text-black flex items-center justify-center uppercase shrink-0 ${isOwner ? 'bg-[#FFE8D9]' : 'bg-[#E5E7EB]'}`}>
+                      {getInitials(project.owner || ownerEmail)}
+                    </div>
+                    
+                    <span className={`w-[109px] h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] shrink-0 ${isOwner ? 'bg-[#FFE8D9] text-[#D3590B]' : 'bg-[#E5E7EB] text-[#6B7280]'}`}>
+                      {roleLabel}
+                    </span>
+                    
+                    <div className="flex items-center -space-x-2 ml-1">
+                      {uniqueContributors.slice(0, 3).map((contrib: any, idx: number) => {
+                        const isMe = contrib.email?.toLowerCase() === userEmail?.toLowerCase();
+                        return (
+                          <div 
+                            key={idx} 
+                            className={`h-7 w-7 rounded-full border-2 border-white flex items-center justify-center font-sans font-normal text-[10px] text-black uppercase relative z-10 ${isMe ? 'bg-[#FFE8D9]' : 'bg-[#E5E7EB]'}`} 
+                            title={typeof contrib === "string" ? contrib : contrib.email}
+                          >
+                            {getInitials(contrib)}
+                          </div>
+                        )
+                      })}
+                      {uniqueContributors.length > 3 && (
+                        <div aria-label={`+ ${uniqueContributors.length - 3} autres contributeurs`} className="h-7 w-7 rounded-full bg-gray-50 text-gray-400 font-sans font-normal text-[10px] flex items-center justify-center border-2 border-white relative z-10">
+                          +{uniqueContributors.length - 3}
                         </div>
-                      )
-                    })}
-                    {uniqueContributors.length > 3 && (
-                      <div aria-label={`+ ${uniqueContributors.length - 3} autres contributeurs`} className="h-7 w-7 rounded-full bg-gray-50 text-gray-400 font-sans font-normal text-[10px] flex items-center justify-center border-2 border-white relative z-10">
-                        +{uniqueContributors.length - 3}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
 
       {/* MODALE CRÉATION PROJET */}
       {showProjectModale && (
@@ -340,7 +361,7 @@ export default function ProjectsListPage() {
               type="button" 
               onClick={() => { setShowProjectModale(false); setSelectedContributors([]); }} 
               aria-label="Fermer la fenêtre de création"
-              className="absolute top-5 right-5 p-1 text-gray-400 hover:text-gray-600"
+              className="absolute top-5 right-5 p-1 text-gray-400 hover:text-gray-600 cursor-pointer"
             >
               <X className="w-5 h-5 stroke-[1.5]" aria-hidden="true" />
             </button>
@@ -381,7 +402,7 @@ export default function ProjectsListPage() {
                           type="button" 
                           aria-label={`Retirer ${c.name} des contributeurs`}
                           onClick={() => setSelectedContributors(selectedContributors.filter(sc => sc.email !== c.email))} 
-                          className="text-orange-500 hover:bg-orange-100 rounded-full p-0.5"
+                          className="text-orange-500 hover:bg-orange-100 rounded-full p-0.5 cursor-pointer"
                         >
                           <X className="w-3 h-3" aria-hidden="true" />
                         </button>
@@ -428,7 +449,7 @@ export default function ProjectsListPage() {
                 type="submit" 
                 disabled={isCreatingProject || !projectTitle.trim()} 
                 aria-label={isCreatingProject ? "Création du projet en cours" : "Ajouter un projet"}
-                className="bg-[#121212] hover:bg-black text-white w-[181px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-70"
+                className="bg-[#121212] hover:bg-black text-white w-[181px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-70 cursor-pointer"
               >
                 {isCreatingProject ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : "Ajouter un projet"}
               </button>
