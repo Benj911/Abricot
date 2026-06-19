@@ -724,7 +724,7 @@ export default function ProjectDetailsPage() {
                     <button 
                       onClick={() => toggleComments(task.id)} 
                       aria-expanded={isCommentsOpen}
-                      aria-controls={`comments-${task.id}`}
+                      aria-controls={`commentaires de -${task.title}`}
                       className="w-full flex items-center justify-between px-5 py-3 font-sans font-normal text-[14px] text-[#6B7280] hover:bg-gray-50 rounded-b-[10px] transition-colors cursor-pointer"
                     >
                       <span>Commentaires ({taskComments.length})</span>
