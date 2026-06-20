@@ -989,9 +989,9 @@ export default function ProjectDetailsPage() {
               <div className="space-y-1.5">
                 <label className="font-sans font-normal text-[14px] text-gray-800">Statut :</label>
                 <div className="flex gap-2">
-                  <button type="button" aria-pressed={manualStatus === "TODO"} onClick={() => setManualStatus("TODO")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${manualStatus === "TODO" ? "bg-[#FFE0E0] text-[#EF4444]" : "bg-gray-50 text-gray-500"}`}>À faire</button>
-                  <button type="button" aria-pressed={manualStatus === "IN_PROGRESS"} onClick={() => setManualStatus("IN_PROGRESS")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${manualStatus === "IN_PROGRESS" ? "bg-[#FFF0D7] text-[#E08D00]" : "bg-gray-50 text-gray-500"}`}>En cours</button>
-                  <button type="button" aria-pressed={manualStatus === "DONE"} onClick={() => setManualStatus("DONE")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${manualStatus === "DONE" ? "bg-[#F1FFF7] text-[#27AE60]" : "bg-gray-50 text-gray-500"}`}>Terminée</button>
+                  <button type="button" aria-pressed={manualStatus === "TODO"} onClick={() => setManualStatus("TODO")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${manualStatus === "TODO" ? "bg-[#FFE0E0] text-[#b91c1c]" : "bg-gray-50 text-gray-500"}`}>À faire</button>
+                  <button type="button" aria-pressed={manualStatus === "IN_PROGRESS"} onClick={() => setManualStatus("IN_PROGRESS")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${manualStatus === "IN_PROGRESS" ? "bg-[#FFF0D7] text-[#92400e]" : "bg-gray-50 text-gray-500"}`}>En cours</button>
+                  <button type="button" aria-pressed={manualStatus === "DONE"} onClick={() => setManualStatus("DONE")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${manualStatus === "DONE" ? "bg-[#F1FFF7] text-[#15803d]" : "bg-gray-50 text-gray-500"}`}>Terminée</button>
                 </div>
               </div>
             </div>
@@ -1052,9 +1052,9 @@ export default function ProjectDetailsPage() {
               <div className="space-y-1.5">
                 <label className="font-sans font-normal text-[14px] text-gray-800">Statut :</label>
                 <div className="flex gap-2">
-                  <button type="button" aria-pressed={editTaskStatus === "TODO"} onClick={() => setEditTaskStatus("TODO")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${editTaskStatus === "TODO" ? "bg-[#FFE0E0] text-[#EF4444]" : "bg-gray-50 text-gray-500"}`}>À faire</button>
-                  <button type="button" aria-pressed={editTaskStatus === "IN_PROGRESS"} onClick={() => setEditTaskStatus("IN_PROGRESS")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${editTaskStatus === "IN_PROGRESS" ? "bg-[#FFF0D7] text-[#E08D00]" : "bg-gray-50 text-gray-500"}`}>En cours</button>
-                  <button type="button" aria-pressed={editTaskStatus === "DONE"} onClick={() => setEditTaskStatus("DONE")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${editTaskStatus === "DONE" ? "bg-[#F1FFF7] text-[#27AE60]" : "bg-gray-50 text-gray-500"}`}>Terminée</button>
+                  <button type="button" aria-pressed={editTaskStatus === "TODO"} onClick={() => setEditTaskStatus("TODO")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${editTaskStatus === "TODO" ? "bg-[#FFE0E0] text-[#b91c1c]" : "bg-gray-50 text-gray-500"}`}>À faire</button>
+                  <button type="button" aria-pressed={editTaskStatus === "IN_PROGRESS"} onClick={() => setEditTaskStatus("IN_PROGRESS")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${editTaskStatus === "IN_PROGRESS" ? "bg-[#FFF0D7] text-[#92400e]" : "bg-gray-50 text-gray-500"}`}>En cours</button>
+                  <button type="button" aria-pressed={editTaskStatus === "DONE"} onClick={() => setEditTaskStatus("DONE")} className={`font-sans font-normal text-[14px] px-4 py-1.5 rounded-[50px] cursor-pointer ${editTaskStatus === "DONE" ? "bg-[#F1FFF7] text-[#15803d]" : "bg-gray-50 text-gray-500"}`}>Terminée</button>
                 </div>
               </div>
             </div>
