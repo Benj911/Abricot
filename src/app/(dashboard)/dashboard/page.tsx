@@ -163,9 +163,10 @@ export default function DashboardPage() {
     const s = status?.toUpperCase() || "TODO";
     const base = "h-[25px] rounded-[50px] flex items-center justify-center font-sans font-normal text-[14px] leading-none whitespace-nowrap px-2";
     
-    if (s === "DONE") return `${base} w-[94px] bg-[#F1FFF7] text-[#27AE60]`;
-    if (s === "IN_PROGRESS" || s === "PROGRESS") return `${base} w-[90px] bg-[#FFF0D7] text-[#E08D00]`;
-    return `${base} w-[75px] bg-[#FFE0E0] text-[#EF4444]`;
+    // CORRECTION WAVE : Textes assombris
+    if (s === "DONE") return `${base} w-[94px] bg-[#F1FFF7] text-[#15803D]`;
+    if (s === "IN_PROGRESS" || s === "PROGRESS") return `${base} w-[90px] bg-[#FFF0D7] text-[#92400E]`;
+    return `${base} w-[75px] bg-[#FFE0E0] text-[#B91C1C]`;
   };
 
   const formatDate = (isoString?: string | null) => {
@@ -184,12 +185,29 @@ export default function DashboardPage() {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
 
+  // CORRECTION : Filtre les tâches pour le Kanban (uniquement les tâches du mois en cours)
   const getTasksByColumn = (col: "TODO" | "IN_PROGRESS" | "DONE") => {
     return sortedAndFilteredTasks.filter(t => {
+      // 1. Vérification du statut
       const s = t.status?.toUpperCase() || "TODO";
-      if (col === "TODO") return s === "TODO";
-      if (col === "IN_PROGRESS") return s === "IN_PROGRESS" || s === "PROGRESS";
-      return s === "DONE";
+      const matchesStatus = 
+        (col === "TODO" && s === "TODO") ||
+        (col === "IN_PROGRESS" && (s === "IN_PROGRESS" || s === "PROGRESS")) ||
+        (col === "DONE" && s === "DONE");
+
+      if (!matchesStatus) return false;
+
+      // 2. Vérification de la date (uniquement pour le mois en cours)
+      if (!t.dueDate) return false; // S'il n'y a pas de date, on ne l'affiche pas dans le Kanban du mois
+      
+      const today = new Date();
+      const taskDate = new Date(t.dueDate);
+      
+      const isThisMonth = 
+        taskDate.getMonth() === today.getMonth() && 
+        taskDate.getFullYear() === today.getFullYear();
+
+      return isThisMonth;
     });
   };
 
@@ -252,12 +270,13 @@ export default function DashboardPage() {
 
       {/* TOGGLE VUES - Navigation accessible par onglets */}
       <div className="flex items-center gap-4" role="tablist" aria-label="Sélection de la vue du tableau de bord">
+        {/* CORRECTION WAVE : Contraste ajusté (#B24B0A) */}
         <button 
           role="tab"
           aria-selected={activeTab === "liste"}
           onClick={() => setActiveTab("liste")} 
           className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-sans font-normal text-[14px] transition-colors cursor-pointer ${
-            activeTab === "liste" ? "bg-[#FFE8D9] text-[#D3590B]" : "bg-white border border-gray-200 text-[#D3590B] hover:bg-orange-50"
+            activeTab === "liste" ? "bg-[#FFE8D9] text-[#B24B0A]" : "bg-white border border-gray-200 text-[#B24B0A] hover:bg-orange-50"
           }`}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -266,12 +285,13 @@ export default function DashboardPage() {
           </svg>
           Liste
         </button>
+        {/* CORRECTION WAVE : Contraste ajusté (#B24B0A) */}
         <button 
           role="tab"
           aria-selected={activeTab === "kanban"}
           onClick={() => setActiveTab("kanban")} 
           className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-sans font-normal text-[14px] transition-colors cursor-pointer ${
-            activeTab === "kanban" ? "bg-[#FFE8D9] text-[#D3590B]" : "bg-white border border-gray-200 text-[#D3590B] hover:bg-orange-50"
+            activeTab === "kanban" ? "bg-[#FFE8D9] text-[#B24B0A]" : "bg-white border border-gray-200 text-[#B24B0A] hover:bg-orange-50"
           }`}
         >
           <svg width="15" height="17" viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -279,12 +299,13 @@ export default function DashboardPage() {
           </svg>
           Kanban
         </button>
+        {/* CORRECTION WAVE : Contraste ajusté (#B24B0A) */}
         <button 
           role="tab"
           aria-selected={activeTab === "projets"}
           onClick={() => setActiveTab("projets")} 
           className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-sans font-normal text-[14px] transition-colors cursor-pointer ${
-            activeTab === "projets" ? "bg-[#FFE8D9] text-[#D3590B]" : "bg-white border border-gray-200 text-[#D3590B] hover:bg-orange-50"
+            activeTab === "projets" ? "bg-[#FFE8D9] text-[#B24B0A]" : "bg-white border border-gray-200 text-[#B24B0A] hover:bg-orange-50"
           }`}
         >
           <svg width="29" height="23" viewBox="0 0 29 23" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" aria-hidden="true">

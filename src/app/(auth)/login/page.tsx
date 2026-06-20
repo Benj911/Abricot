@@ -53,7 +53,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-[#F9FAFB]">
       
       {/* Section contenant le formulaire de connexion */}
       <div className="w-full lg:w-[40%] flex flex-col justify-between p-8 md:p-12 relative z-10">
@@ -137,10 +137,11 @@ export default function LoginPage() {
             </div>
           </form>
         </div>
-
-        <div className="text-xs font-medium text-gray-600 text-center mt-auto">
+        
+        {/* CORRECTION WAVE : Contraste ajusté (#B24B0A)*/}
+        <div className="text-sm font-normal text-gray-700 text-center mt-auto">
           Pas encore de compte ?{" "}
-          <Link href="/register" className="text-[#D3590B] hover:underline ml-1">
+          <Link href="/register" className="text-[#B24B0A] font-normal hover:underline ml-1">
             Créer un compte
           </Link>
         </div>

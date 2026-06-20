@@ -321,8 +321,8 @@ export default function ProjectsListPage() {
                     <div aria-hidden="true" className={`h-7 w-7 rounded-full font-sans font-normal text-[10px] text-black flex items-center justify-center uppercase shrink-0 ${isOwner ? 'bg-[#FFE8D9]' : 'bg-[#E5E7EB]'}`}>
                       {getInitials(project.owner || ownerEmail)}
                     </div>
-                    
-                    <span className={`w-[109px] h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] shrink-0 ${isOwner ? 'bg-[#FFE8D9] text-[#D3590B]' : 'bg-[#E5E7EB] text-[#6B7280]'}`}>
+                    {/* CORRECTION WAVE : Contraste ajusté */}
+                    <span className={`w-[109px] h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] shrink-0 ${isOwner ? 'bg-[#FFE8D9] text-[#B24B0A]' : 'bg-[#E5E7EB] text-[#616875]'}`}>
                       {roleLabel}
                     </span>
                     

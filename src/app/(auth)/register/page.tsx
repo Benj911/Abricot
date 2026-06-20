@@ -62,7 +62,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-[#F9FAFB]">
       
       {/* Section formulaire */}
       <div className="w-full lg:w-[40%] flex flex-col justify-between p-8 md:p-12 relative z-10">
@@ -174,8 +174,9 @@ export default function RegisterPage() {
           </form>
         </div>
 
-        <div className="text-xs font-medium text-gray-600 text-center mt-auto">
-          Déjà inscrit ? <Link href="/login" className="text-[#D3590B] hover:underline ml-1">Se connecter</Link>
+        {/* CORRECTION WAVE : Contraste ajusté (#B24B0A)  */}
+        <div className="text-sm font-normal text-gray-700 text-center mt-auto">
+          Déjà inscrit ? <Link href="/login" className="text-[#B24B0A] hover:underline ml-1">Se connecter</Link>
         </div>
 
       </div>

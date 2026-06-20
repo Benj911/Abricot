@@ -64,7 +64,14 @@ export default function ProjectDetailsPage() {
   const [userEmail, setUserEmail] = useState("");
 
   // Détermine si l'utilisateur possède les droits d'administration sur le projet
-  const isOwner = project?.owner?.email?.toLowerCase() === userEmail?.toLowerCase();
+// CORRECTION : Détermination des droits basée sur les rôles renvoyés par l'API
+  const [currentUserRole, setCurrentUserRole] = useState<"OWNER" | "ADMIN" | "CONTRIBUTOR" | null>(null);
+  
+  // Pour la suppression stricte (exigée par le backend)
+  const isTrueOwner = currentUserRole === "OWNER" || project?.owner?.email?.toLowerCase() === userEmail?.toLowerCase();
+  
+  // Pour la modification (exigée par les specs du jury)
+  const isAdmin = currentUserRole === "ADMIN" || isTrueOwner;
 
   const [assignableUsers, setAssignableUsers] = useState<UserInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,9 +134,11 @@ export default function ProjectDetailsPage() {
   const getStatusClasses = (status: string) => {
     const s = status?.toUpperCase() || "TODO";
     const base = "h-[25px] rounded-[50px] flex items-center justify-center font-sans font-normal text-[14px] leading-none whitespace-nowrap px-2";
-    if (s === "DONE") return `${base} w-[94px] bg-[#F1FFF7] text-[#27AE60]`;
-    if (s === "IN_PROGRESS" || s === "PROGRESS") return `${base} w-[90px] bg-[#FFF0D7] text-[#E08D00]`;
-    return `${base} w-[75px] bg-[#FFE0E0] text-[#EF4444]`;
+    
+    // CORRECTION WAVE : Textes assombris
+    if (s === "DONE") return `${base} w-[94px] bg-[#F1FFF7] text-[#15803D]`;
+    if (s === "IN_PROGRESS" || s === "PROGRESS") return `${base} w-[90px] bg-[#FFF0D7] text-[#92400E]`;
+    return `${base} w-[75px] bg-[#FFE0E0] text-[#B91C1C]`;
   };
 
   const getInitials = (name: string, email: string) => {
@@ -170,22 +179,37 @@ export default function ProjectDetailsPage() {
         });
 
         const teamList: UserInfo[] = [];
-
+        
         if (proj.owner) {
           const oId = proj.owner.id || "owner-id";
           const oEmail = proj.owner.email || (typeof proj.owner === 'string' ? proj.owner : "");
           const oName = proj.owner.name || proj.owner.username || oEmail.split("@")[0] || "Propriétaire";
           teamList.push({ id: oId, name: oName, email: oEmail, role: "OWNER" });
+          
+          // CORRECTION : Si c'est moi le propriétaire, j'enregistre mon rôle
+          if (oEmail.toLowerCase() === userEmail.toLowerCase()) {
+            setCurrentUserRole("OWNER");
+          }
         }
 
         const rawMembers = proj.members || proj.contributors || [];
         if (Array.isArray(rawMembers)) {
           rawMembers.forEach((m: any) => {
             const userData = m.user ? m.user : m;
+            // On récupère le rôle renvoyé par l'API (s'il y en a un)
+            const apiRole = m.role || "CONTRIBUTOR"; 
+            
             if (userData) {
               const uId = userData.id || userData._id;
               const uEmail = userData.email || "";
               const uName = userData.name || userData.username || uEmail.split("@")[0] || "Collaborateur";
+              
+              // Enregistrement du rôle si c'est moi
+              if (uEmail.toLowerCase() === userEmail.toLowerCase()) {
+                setCurrentUserRole(apiRole);
+              }
+
+              // CORRECTION : On rajoute bien les contributeurs dans l'équipe pour l'affichage !
               if (uEmail && !teamList.some(t => t.email.toLowerCase() === uEmail.toLowerCase())) {
                 teamList.push({ id: uId, name: uName, email: uEmail, role: "CONTRIBUTOR" });
               }
@@ -280,7 +304,7 @@ export default function ProjectDetailsPage() {
    * Sauvegarde les modifications du projet.
    * Procède à un delta (ajouts/suppressions) pour mettre à jour la liste des contributeurs via l'API.
    */
-  const handleUpdateProject = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateProject = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const token = Cookies.get("abricot_token");
     const cleanToken = decodeURIComponent(token || "").replace(/^"|"$/g, '');
@@ -322,7 +346,7 @@ export default function ProjectDetailsPage() {
     }
   };
 
-  const handleCreateManualTask = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateManualTask = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!manualTitle.trim()) return;
 
@@ -334,8 +358,8 @@ export default function ProjectDetailsPage() {
       const payload = {
         title: manualTitle,
         description: manualDescription,
-        status: manualStatus, 
-        priority: "LOW",                     
+        // On enlève "status" d'ici car le backend ne le lit pas à la création
+        priority: calculatePriority(manualDueDate),                     
         projectId: id,                       
         dueDate: manualDueDate ? new Date(manualDueDate).toISOString() : null,
         userIds: selectedCollaborators,
@@ -343,6 +367,7 @@ export default function ProjectDetailsPage() {
         assignees: selectedCollaborators.map(userId => ({ userId }))
       };
 
+      // 1. Création de la tâche (le backend va forcer TODO)
       const response = await fetch(`/api/projects/${id}/tasks`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${cleanToken}`, "Content-Type": "application/json" },
@@ -350,6 +375,20 @@ export default function ProjectDetailsPage() {
       });
 
       if (response.ok) {
+        const jsonResponse = await response.json();
+        // Le backend renvoie la tâche créée dans jsonResponse.data.task (ou équivalent)
+        const createdTaskId = jsonResponse.data?.task?.id || jsonResponse.task?.id || jsonResponse?.id;
+
+        // 2. CORRECTION/RUSE : Si l'utilisateur voulait un autre statut que TODO, 
+        // on lance immédiatement une mise à jour silencieuse pour forcer le statut.
+        if (createdTaskId && manualStatus !== "TODO") {
+          await fetch(`/api/projects/${id}/tasks/${createdTaskId}`, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${cleanToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ status: manualStatus })
+          });
+        }
+
         setShowManualModale(false);
         setManualTitle("");
         setManualDescription("");
@@ -359,6 +398,22 @@ export default function ProjectDetailsPage() {
         fetchTasks(cleanToken);
       }
     } catch (e) { console.error(e); } finally { setIsCreatingManual(false); }
+  };
+
+  // Nouvelle fonction pour calculer la priorité automatiquement
+  const calculatePriority = (dateString?: string | null) => {
+    if (!dateString) return "LOW"; // Si pas de date, on met en priorité basse
+    
+    const today = new Date();
+    const dueDate = new Date(dateString);
+    
+    // Calcul de la différence en jours
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 7) return "HIGH";
+    if (diffDays <= 30) return "MEDIUM";
+    return "LOW";
   };
 
   const openEditTaskModale = (task: Task) => {
@@ -373,7 +428,7 @@ export default function ProjectDetailsPage() {
     setShowEditModale(true);
   };
 
-  const handleUpdateTask = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateTask = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!taskToEditId || !editTaskTitle.trim()) return;
 
@@ -385,7 +440,8 @@ export default function ProjectDetailsPage() {
       const payload = { 
         title: editTaskTitle, 
         description: editTaskDescription, 
-        status: editTaskStatus, 
+        status: editTaskStatus,
+        priority: calculatePriority(editTaskDueDate), 
         dueDate: editTaskDueDate ? new Date(editTaskDueDate).toISOString() : null,
         userIds: editSelectedCollaborators,
         assigneeIds: editSelectedCollaborators,
@@ -454,11 +510,17 @@ export default function ProjectDetailsPage() {
     e.preventDefault();
     if (!userPrompt.trim() || isGenerating) return;
 
+    const token = Cookies.get("abricot_token");
+    const cleanToken = decodeURIComponent(token || "").replace(/^"|"$/g, '');
+
     setIsGenerating(true);
     try {
       const response = await fetch(`/local-api/projects/${id}/generate-tasks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${cleanToken}` 
+        },
         body: JSON.stringify({ 
           userPrompt: userPrompt,
           projectTitle: project?.name || project?.title || "Projet",
@@ -540,6 +602,30 @@ export default function ProjectDetailsPage() {
     });
 
   if (isLoading) return <div className="p-8 text-xs text-gray-500 flex justify-center items-center gap-2 min-h-[50vh]" role="status" aria-live="polite"><Loader2 className="w-4 h-4 animate-spin text-[#D3590B]" aria-hidden="true" /> Chargement du projet...</div>;
+  
+  // CORRECTION : Fonction de suppression de projet
+  const handleDeleteProject = async () => {
+    if (!confirm("Attention, cette action est irréversible. Voulez-vous vraiment supprimer ce projet ?")) return;
+    
+    const token = Cookies.get("abricot_token");
+    const cleanToken = decodeURIComponent(token || "").replace(/^"|"$/g, '');
+
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${cleanToken}` }
+      });
+
+      if (response.ok) {
+        // Redirection vers le dashboard après suppression
+        window.location.href = "/projects";
+      } else {
+        alert("Erreur lors de la suppression du projet. Vous n'avez peut-être pas les droits requis.");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-[1215px] mx-auto pb-20">
@@ -554,9 +640,16 @@ export default function ProjectDetailsPage() {
             <div className="flex items-center gap-3">
               <h1 className="font-heading font-semibold text-[24px] text-gray-900">{project?.name || project?.title}</h1>
               {/* Seul le propriétaire peut modifier les informations et l'équipe du projet */}
-              {isOwner && (
-                <button onClick={openEditProjectModale} aria-label="Modifier les paramètres du projet" className="font-sans font-normal text-[14px] text-[#D3590B] hover:text-orange-700 hover:underline transition-all cursor-pointer">
+              {/* CORRECTION : L'édition est autorisée pour les ADMINS */}
+              {isAdmin && (
+                <button onClick={openEditProjectModale} aria-label="Modifier les paramètres du projet" className="font-sans font-normal text-[14px] text-[#B24B0A] hover:text-orange-700 hover:underline transition-all cursor-pointer">
                   Modifier
+                </button>
+              )}
+              {/* CORRECTION : La suppression est autorisée pour le propriétaire (Owner) */}
+              {isTrueOwner && (
+                <button onClick={handleDeleteProject} aria-label="Supprimer le projet" className="font-sans font-normal text-[14px] text-red-600 hover:text-red-800 hover:underline transition-all cursor-pointer border-l border-gray-300 pl-3">
+                  Supprimer
                 </button>
               )}
             </div>
@@ -568,7 +661,9 @@ export default function ProjectDetailsPage() {
           <button onClick={() => setShowManualModale(true)} aria-haspopup="dialog" className="bg-[#121212] hover:bg-[#1F1F1F] text-white w-[181px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
             Créer une tâche
           </button>
-          <button onClick={() => setShowIAModale(true)} aria-haspopup="dialog" className="bg-[#D3590B] text-white hover:bg-[#FFE8D9] hover:text-[#D3590B] w-[121px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+          
+          {/* CORRECTION WAVE : Contraste ajusté (#B24B0A) & (#C2510A) */}
+          <button onClick={() => setShowIAModale(true)} aria-haspopup="dialog" className="bg-[#C2510A] text-white hover:bg-[#FFE8D9] hover:text-[#B24B0A] w-[121px] h-[50px] rounded-[10px] font-sans font-normal text-[16px] transition-colors shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
             <Sparkles className="w-4 h-4" aria-hidden="true" /> IA
           </button>
         </div>
@@ -576,22 +671,25 @@ export default function ProjectDetailsPage() {
 
       {/* BANDEAU CONTRIBUTEURS */}
       <div className="bg-[#F3F4F6] rounded-[10px] p-5 flex items-center justify-between shadow-sm">
+        {/* CORRECTION WAVE : Contraste ajusté (#686F7D) */}
         <div className="font-heading font-semibold text-[18px] text-gray-900">
-          Contributeurs <span className="font-sans font-normal text-[16px] text-[#6B7280] ml-2">{assignableUsers.length} personnes</span>
+          Contributeurs <span className="font-sans font-normal text-[16px] text-[#686F7D] ml-2">{assignableUsers.length} personnes</span>
         </div>
+        {/* CORRECTION WAVE : Contraste ajusté*/}
         <div className="flex items-center gap-4 flex-wrap">
           {assignableUsers.map(user => {
             const isMe = user.email?.toLowerCase() === userEmail?.toLowerCase();
-            const bgBubble = isMe ? "bg-[#FFE8D9]" : "bg-[#E5E7EB]";
+            const bubbleStyle = isMe ? "bg-[#FFE8D9]" : "bg-[#E5E7EB]";
+            const textBubble = isMe ? "text-[#B24B0A]" : "text-[#616875]";
             const isOwnerCheck = user.role === "OWNER";
             const roleOrName = isOwnerCheck ? "Propriétaire" : (user.name || user.email.split("@")[0]);
 
             return (
               <div key={user.id} className="flex items-center gap-2">
-                <div aria-hidden="true" className={`h-7 w-7 rounded-full font-sans font-normal text-[10px] text-black flex items-center justify-center uppercase shadow-sm ${bgBubble}`}>
+                <div aria-hidden="true" className={`h-7 w-7 rounded-full font-sans font-medium text-[10px] text-black flex items-center justify-center uppercase shadow-sm ${bubbleStyle}`}>
                   {getInitials(user.name, user.email)}
                 </div>
-                <span className={`px-4 h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] text-[#6B7280] ${bgBubble} max-[600px]:hidden`}>
+                <span className={`px-4 h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] max-[600px]:hidden ${bubbleStyle} ${textBubble}`}>
                   {roleOrName}
                 </span>
               </div>
@@ -609,14 +707,16 @@ export default function ProjectDetailsPage() {
 
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2" role="tablist" aria-label="Mode d'affichage des tâches">
-              <button role="tab" aria-selected={viewMode === "liste"} onClick={() => setViewMode("liste")} className={`flex items-center justify-center gap-1.5 px-4 h-[45px] rounded-[8px] font-sans font-normal text-[14px] transition-colors border-none cursor-pointer ${viewMode === "liste" ? "bg-[#FFE8D9] text-[#D3590B]" : "bg-white text-[#6B7280] hover:bg-gray-50"}`}>
+              {/* CORRECTION WAVE : Contraste ajusté (#B24B0A) */}
+              <button role="tab" aria-selected={viewMode === "liste"} onClick={() => setViewMode("liste")} className={`flex items-center justify-center gap-1.5 px-4 h-[45px] rounded-[8px] font-sans font-normal text-[14px] transition-colors border-none cursor-pointer ${viewMode === "liste" ? "bg-[#FFE8D9] text-[#B24B0A]" : "bg-white text-[#6B7280] hover:bg-gray-50"}`}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M15.1111 7.82222C14.5778 7.82222 14.2222 8.17778 14.2222 8.71111V13.6889C14.2222 13.9556 13.9556 14.2222 13.6889 14.2222H2.31111C2.04444 14.2222 1.77778 13.9556 1.77778 13.6889V2.31111C1.77778 2.04444 2.04444 1.77778 2.31111 1.77778H10.8444C11.3778 1.77778 11.7333 1.42222 11.7333 0.888889C11.7333 0.355556 11.3778 0 10.8444 0H2.31111C1.06667 0 0 1.06667 0 2.31111V13.6889C0 14.9333 1.06667 16 2.31111 16H13.6889C14.9333 16 16 14.9333 16 13.6889V8.71111C16 8.26667 15.6444 7.82222 15.1111 7.82222Z" fill="currentColor"/>
                   <path d="M6.84435 7.1111C6.48879 6.75555 5.95546 6.84443 5.5999 7.19999C5.33324 7.46666 5.33324 7.99999 5.5999 8.35555L7.55546 10.4C7.73324 10.5778 7.91101 10.6667 8.17768 10.6667C8.44435 10.6667 8.62212 10.5778 8.7999 10.4L14.8443 4.17777C15.1999 3.82221 15.1999 3.28888 14.8443 2.93332C14.4888 2.57777 13.9555 2.57777 13.5999 2.93332L8.17768 8.53332L6.84435 7.1111Z" fill="currentColor"/>
                 </svg>
                 Liste
               </button>
-              <button role="tab" aria-selected={viewMode === "calendrier"} onClick={() => setViewMode("calendrier")} className={`flex items-center justify-center gap-1.5 px-4 h-[45px] rounded-[8px] font-sans font-normal text-[14px] transition-colors border-none cursor-pointer ${viewMode === "calendrier" ? "bg-[#FFE8D9] text-[#D3590B]" : "bg-white text-[#6B7280] hover:bg-gray-50"}`}>
+              {/* CORRECTION WAVE : Contraste ajusté (#B24B0A) */}
+              <button role="tab" aria-selected={viewMode === "calendrier"} onClick={() => setViewMode("calendrier")} className={`flex items-center justify-center gap-1.5 px-4 h-[45px] rounded-[8px] font-sans font-normal text-[14px] transition-colors border-none cursor-pointer ${viewMode === "calendrier" ? "bg-[#FFE8D9] text-[#B24B0A]" : "bg-white text-[#6B7280] hover:bg-gray-50"}`}>
                 <svg width="15" height="17" viewBox="0 0 15 17" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" aria-hidden="true">
                   <path d="M4.42285 0C4.10746 0 3.8457 0.261761 3.8457 0.577148V1.17871C1.39505 1.38897 0 2.96789 0 5.57715V12.1152C0 14.9229 1.61522 16.538 4.42285 16.5381H10.5771C13.3847 16.538 15 14.9229 15 12.1152V5.57715C15 2.96794 13.6049 1.38901 11.1543 1.17871V0.577148C11.1543 0.261782 10.8925 3.47543e-05 10.5771 0C10.2618 0 10 0.261761 10 0.577148V1.15332H5V0.577148C5 0.261793 4.7382 5.25452e-05 4.42285 0ZM13.8457 12.1152C13.8457 14.3152 12.777 15.3847 10.5771 15.3848H4.42285C2.22293 15.3847 1.15332 14.3152 1.15332 12.1152V6.60742H13.8457V12.1152ZM10.4844 11.4082C10.1998 11.2852 9.86186 11.3541 9.64648 11.5693C9.61572 11.6078 9.57679 11.6461 9.55371 11.6846C9.52294 11.7307 9.49976 11.7771 9.48438 11.8232C9.46134 11.8693 9.44616 11.9159 9.43848 11.9697C9.43082 12.0157 9.42288 12.0693 9.42285 12.1152C9.42285 12.3152 9.50802 12.516 9.64648 12.6621C9.7926 12.8003 9.99256 12.8848 10.1924 12.8848C10.2923 12.8848 10.3922 12.8616 10.4844 12.8232C10.5765 12.7848 10.6615 12.7312 10.7383 12.6621C10.8075 12.5852 10.8619 12.5081 10.9004 12.4082C10.9389 12.3159 10.9619 12.2152 10.9619 12.1152C10.9618 11.9153 10.8767 11.7154 10.7383 11.5693C10.6614 11.5001 10.5766 11.4466 10.4844 11.4082ZM10.0381 8.66895C9.99208 8.67665 9.94639 8.69283 9.90039 8.71582C9.85434 8.73117 9.80777 8.75352 9.76172 8.78418C9.72332 8.8149 9.68489 8.84623 9.64648 8.87695C9.61572 8.9154 9.57679 8.95374 9.55371 8.99219C9.52294 9.03834 9.49976 9.08471 9.48438 9.13086C9.46134 9.17696 9.44616 9.22343 9.43848 9.26953C9.43081 9.32318 9.42288 9.3692 9.42285 9.42285C9.42285 9.62285 9.50802 9.82357 9.64648 9.96973C9.7926 10.108 9.99256 10.1924 10.1924 10.1924C10.2923 10.1924 10.3922 10.1693 10.4844 10.1309C10.5765 10.0925 10.6614 10.0388 10.7383 9.96973C10.8075 9.89286 10.8619 9.80804 10.9004 9.71582C10.9389 9.62351 10.9619 9.52285 10.9619 9.42285C10.9618 9.22293 10.8767 9.02305 10.7383 8.87695C10.6614 8.80777 10.5766 8.75426 10.4844 8.71582C10.3459 8.65431 10.1919 8.63818 10.0381 8.66895ZM8.0459 8.87695C7.83052 8.66172 7.48485 8.59282 7.20801 8.71582C7.10806 8.75426 7.03098 8.80778 6.9541 8.87695C6.8157 9.02304 6.73055 9.22294 6.73047 9.42285C6.73047 9.4767 6.7384 9.5233 6.74609 9.57715C6.75379 9.62325 6.76894 9.66972 6.79199 9.71582C6.80733 9.76177 6.83074 9.80757 6.86133 9.85352C6.8921 9.89198 6.92333 9.93126 6.9541 9.96973C7.03091 10.0388 7.10815 10.0925 7.20801 10.1309C7.30023 10.1693 7.4001 10.1924 7.5 10.1924C7.69983 10.1924 7.89978 10.108 8.0459 9.96973C8.07667 9.93126 8.1079 9.89198 8.13867 9.85352C8.16927 9.80756 8.19266 9.76177 8.20801 9.71582C8.23106 9.66972 8.2462 9.62325 8.25391 9.57715C8.2616 9.5233 8.26953 9.4767 8.26953 9.42285C8.26949 9.32299 8.2464 9.22305 8.20801 9.13086C8.16955 9.03855 8.11513 8.95388 8.0459 8.87695ZM10 2.88477C10.0001 3.20009 10.2618 3.46191 10.5771 3.46191C10.8925 3.46188 11.1542 3.20007 11.1543 2.88477V2.33789C12.9266 2.51306 13.806 3.53533 13.8418 5.4541H1.15723C1.193 3.53528 2.07336 2.51303 3.8457 2.33789V2.88477C3.84578 3.20009 4.10751 3.46191 4.42285 3.46191C4.73815 3.46186 4.99992 3.20006 5 2.88477V2.30762H10V2.88477Z" fill="currentColor"/>
                 </svg>
@@ -692,7 +792,8 @@ export default function ProjectDetailsPage() {
                           {formatDate(task.dueDate)}
                         </span>
                       </div>
-
+                      
+                      {/* CORRECTION WAVE : Contraste ajusté*/}
                       <div className="flex items-center gap-2 font-sans font-normal text-[12px] text-[#6B7280]">
                         <span className="text-[#6B7280]">Assigné à :</span>
                         <div className="flex items-center gap-4 flex-wrap">
@@ -702,13 +803,14 @@ export default function ProjectDetailsPage() {
                             if (!u) return null;
                             const isMe = u.email?.toLowerCase() === userEmail?.toLowerCase();
                             const bgBubble = isMe ? "bg-[#FFE8D9]" : "bg-[#E5E7EB]";
+                            const textBubble = isMe ? "text-[#B24B0A]" : "text-[#616875]"; 
                             
                             return (
                               <div key={idx} className="flex items-center gap-2">
                                 <div aria-hidden="true" className={`h-7 w-7 rounded-full font-sans font-normal text-[10px] text-black flex items-center justify-center uppercase shadow-sm ${bgBubble}`}>
                                   {getInitials(u.name, u.email)}
                                 </div>
-                                <span className={`px-4 h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] text-[#6B7280] ${bgBubble} truncate max-[600px]:hidden`}>
+                                <span className={`px-4 h-[25px] flex items-center justify-center rounded-[50px] font-sans font-normal text-[14px] truncate max-[600px]:hidden ${bgBubble} ${textBubble}`}>
                                   {u.name || u.email.split("@")[0]}
                                 </span>
                               </div>
